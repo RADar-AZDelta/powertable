@@ -20,7 +20,8 @@ export function getRegexParts(phrase) {
 }
 </script>
 
-<script>import { onMount, createEventDispatcher } from 'svelte';
+<script>console.log("PowerTable: init");
+import { onMount, createEventDispatcher } from 'svelte';
 // Props
 export var ptInstructs = [];
 export let ptOptions = {};
@@ -30,13 +31,13 @@ let specialInstructs = {
         key: dataIdKey,
         title: '',
         sortable: false,
-        filterable: false,
+        filterable: false
     },
     [checkboxKey]: {
         key: checkboxKey,
         title: '',
         sortable: false,
-        filterable: false,
+        filterable: false
     }
 };
 const dispatch = createEventDispatcher();
@@ -59,21 +60,21 @@ let options = {
     filteredRows: null,
     currentPage: 1,
     userFunctions: {
-        dataFeed: async () => ({}),
+        dataFeed: async () => ({})
     },
     searchPhrase: '',
     searchIsRegex: false,
     checkboxColumn: false,
     segments: {
-        'topBar': ['search', 'pagination'],
-        'pTable': ['table'],
-        'bottomBar': ['dropdown', 'stats', 'pagination'],
+        topBar: ['search', 'pagination'],
+        pTable: ['table'],
+        bottomBar: ['dropdown', 'stats', 'pagination']
     },
     sortOrder: {
         '': 'asc',
-        'asc': 'desc',
-        'desc': '',
-    },
+        asc: 'desc',
+        desc: ''
+    }
 };
 // Associated with instructs prop (ptInstructs) for internal use
 let instructs;
@@ -85,7 +86,7 @@ $: initialize(ptInstructs, ptOptions, ptData);
 let matchedData;
 // Sorted data
 let sortedData = [];
-// Data of the current page 
+// Data of the current page
 let pageData = [];
 // pageData after applying a user defined format function
 let formattedPageData = [];
@@ -94,13 +95,20 @@ let pagination = {
     firstShownRow: 0,
     lastShownRow: 0,
     totalPages: 1,
-    pages: [1],
+    pages: [1]
 };
 let sorting = {};
 let renderStatus = null;
 let searchObj = {};
 let filterObj = {};
-function initialize(ptInstructs, ptOptions, ptData, action = { render: true, preserveFilters: true }) {
+function initialize(ptInstructs, ptOptions, ptData, action = {
+    render: true,
+    preserveFilters: true
+}) {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: initialize");
+        console.log({ ptInstructs, ptOptions, ptData, action });
+    }
     if (ptOptions) {
         Object.assign(options, ptOptions);
     }
@@ -115,9 +123,12 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
         };
     }
     data = JSON.parse(JSON.stringify(ptData));
+    if (ptOptions.verbose) {
+        console.log("PowerTable: remap data to records");
+    }
     // Make data type conformable to Record<string,string>
-    data = data.map(row => {
-        Object.keys(row).forEach(key => {
+    data = data.map((row) => {
+        Object.keys(row).forEach((key) => {
             // If not a special instruct
             if (!specialInstructs.hasOwnProperty(key)) {
                 if (row[key] === null) {
@@ -134,10 +145,13 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
         return row;
     });
     let tempInstructs = [];
+    if (ptOptions.verbose) {
+        console.log("PowerTable: apply instructs");
+    }
     // If ptInstructs prop is empty
     if (!ptInstructs?.length) {
         let firstRecordKeys = Object.keys(data?.[0] ?? []);
-        firstRecordKeys.forEach(key => {
+        firstRecordKeys.forEach((key) => {
             // If not a special instruct (they will be added later)
             if (!specialInstructs.hasOwnProperty(key)) {
                 tempInstructs.push({
@@ -155,7 +169,7 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
         instructs = tempInstructs;
     }
     else {
-        ptInstructs?.forEach(instruct => {
+        ptInstructs?.forEach((instruct) => {
             // If not a special instruct (they will be added later)
             if (!specialInstructs.hasOwnProperty(instruct.key)) {
                 if (!instruct.hasOwnProperty('title')) {
@@ -176,6 +190,9 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
     }
     // Handling spacial instructs
     // Add checkboxes
+    if (ptOptions.verbose) {
+        console.log("PowerTable: add checkboxes");
+    }
     if (!instructs?.[0]?.hasOwnProperty(checkboxKey)) {
         instructs = [specialInstructs[checkboxKey], ...instructs];
         filterObj[checkboxKey] = {
@@ -185,6 +202,9 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
         };
     }
     let checkboxExists = data?.[0]?.hasOwnProperty(checkboxKey);
+    if (ptOptions.verbose) {
+        console.log("PowerTable: add spacial instructs");
+    }
     // Add data associated with spacial instructs
     data = data.map((row, index) => {
         // Re-index
@@ -196,17 +216,29 @@ function initialize(ptInstructs, ptOptions, ptData, action = { render: true, pre
         return row;
     });
     if (action?.render) {
+        if (ptOptions.verbose) {
+            console.log("PowerTable: add spacial instructs: rendering table");
+        }
         renderTable();
     }
 }
 async function renderTable() {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: render");
+    }
     renderStatus = 'rendering';
     if (options.isDataRemote) {
         let remoteParams = {};
         remoteParams['options'] = options;
         remoteParams['search'] = searchObj;
         remoteParams['filters'] = filterObj;
+        if (ptOptions.verbose) {
+            console.log("PowerTable: render: load remote data: ");
+            //log deep copy
+            console.log("PowerTable: call dataFeed:", JSON.parse(JSON.stringify(remoteParams)));
+        }
         let newData = await options.userFunctions?.dataFeed(remoteParams);
+        console.log("PowerTable: end call dataFeed:", newData);
         if (newData?.data) {
             initialize(newData.instructs ?? [], newData.options ?? {}, newData.data, { render: false });
             // Already filtered on the server
@@ -216,6 +248,9 @@ async function renderTable() {
         }
     }
     else {
+        if (ptOptions.verbose) {
+            console.log("PowerTable: render: filter local data");
+        }
         applyFilters();
         applySort();
     }
@@ -223,6 +258,9 @@ async function renderTable() {
     renderStatus = 'completed';
 }
 function trackSorting(key) {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: track sorting");
+    }
     let newSortingState = options.sortOrder[sorting?.[key] ?? ''];
     if (!options.nestedSorting) {
         sorting = {};
@@ -235,44 +273,58 @@ function trackSorting(key) {
 }
 // Applies sorting when data is not remote
 function applySort() {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: apply sort");
+    }
     //*****************************************//
     /* https://github.com/Teun/thenBy.js/blob/master/thenBy.js
-        Copyright 2013 Teun Duynstee
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-        http://www.apache.org/licenses/LICENSE-2.0
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-    */
+    Copyright 2013 Teun Duynstee
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
     const firstBy = (function () {
         const preserveCase = (v) => v;
-        const removeCase = (v) => typeof (v) === "string" ? v.toLowerCase() : v;
+        const removeCase = (v) => (typeof v === 'string' ? v.toLowerCase() : v);
         const makeCompareFunction = (f, opt) => {
-            opt = typeof (opt) === "object" ? opt : { direction: opt };
-            if (typeof (f) != "function") {
+            opt = typeof opt === 'object' ? opt : { direction: opt };
+            if (typeof f != 'function') {
                 var prop = f;
-                f = function (v1) { return !!v1[prop] ? v1[prop] : ""; };
+                f = function (v1) {
+                    return !!v1[prop] ? v1[prop] : '';
+                };
             }
             if (f.length === 1) {
                 var uf = f;
                 var preProcess = opt.caseSensitive ? preserveCase : removeCase;
-                var cmp = opt.cmp || function (v1, v2) { return v1 < v2 ? -1 : v1 > v2 ? 1 : 0; };
+                var cmp = opt.cmp ||
+                    function (v1, v2) {
+                        return v1 < v2 ? -1 : v1 > v2 ? 1 : 0;
+                    };
                 f = (v1, v2) => cmp(preProcess(uf(v1)), preProcess(uf(v2)));
             }
-            const descTokens = { "-1": '', desc: '' };
+            const descTokens = { '-1': '', desc: '' };
             if (opt.direction in descTokens)
-                return function (v1, v2) { return -f(v1, v2); };
+                return function (v1, v2) {
+                    return -f(v1, v2);
+                };
             return f;
         };
         function tb(func, opt) {
             // @ts-ignore
-            var x = (typeof (this) === "function" && !this.firstBy) ? this : false;
+            var x = typeof this === 'function' && !this.firstBy ? this : false;
             var y = makeCompareFunction(func, opt);
-            var f = x ? function (a, b) { return x(a, b) || y(a, b); } : y;
+            var f = x
+                ? function (a, b) {
+                    return x(a, b) || y(a, b);
+                }
+                : y;
             f.thenBy = tb;
             return f;
         }
@@ -288,7 +340,7 @@ function applySort() {
                 caseSensitive: false,
                 direction: dir
             };
-            let instruct = instructs.find(instruct => instruct.key === key);
+            let instruct = instructs.find((instruct) => instruct.key === key);
             if (instruct?.sortCaseSensitive) {
                 opt.caseSensitive = true;
             }
@@ -307,6 +359,9 @@ function applySort() {
 }
 // Applies filters and search, when data is not remote
 function applyFilters() {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: apply filters");
+    }
     // Make a copy of original data
     matchedData = JSON.parse(JSON.stringify(data));
     let previousSearchObj = JSON.parse(JSON.stringify(searchObj));
@@ -315,7 +370,8 @@ function applyFilters() {
     if (searchObj.value) {
         // By default search continues after a custom search
         let customSearchContinue = true;
-        if (typeof (options.userFunctions?.customSearch ?? null) === 'function' && options.userFunctions?.customSearch !== undefined) {
+        if (typeof (options.userFunctions?.customSearch ?? null) === 'function' &&
+            options.userFunctions?.customSearch !== undefined) {
             let customSearchResult = options.userFunctions.customSearch(matchedData, searchObj.value);
             matchedData = customSearchResult.data;
             customSearchContinue = customSearchResult.continue;
@@ -339,8 +395,8 @@ function applyFilters() {
                 catch (e) { }
             }
             if (searchObj.isRegex) {
-                matchedData = matchedData.filter(d => {
-                    return Object.keys(d).some(key => {
+                matchedData = matchedData.filter((d) => {
+                    return Object.keys(d).some((key) => {
                         if (!specialInstructs.hasOwnProperty(key)) {
                             return regexp.test(d?.[key]);
                         }
@@ -353,7 +409,7 @@ function applyFilters() {
             else {
                 let words = searchObj.value.trim().toLowerCase().match(/\S+/g);
                 // Iterate over the rows
-                matchedData = matchedData.filter(d => {
+                matchedData = matchedData.filter((d) => {
                     let unmatchedWords = Object.assign([], words);
                     // Iterate over the fields and remove the matching words from unmatchedWords
                     for (let key of Object.keys(d)) {
@@ -373,6 +429,9 @@ function applyFilters() {
             }
         }
     }
+    if (ptOptions.verbose) {
+        console.log("PowerTable: filter: filter out non-matches");
+    }
     // Filter out any row that doesn't match the filter phrases
     Object.entries(filterObj).forEach(([key, filter]) => {
         let previousFilter = JSON.parse(JSON.stringify(filter));
@@ -381,8 +440,9 @@ function applyFilters() {
         if (filter.value?.length) {
             // By default filter continues after a custom filter
             let customFilterContinue = true;
-            let correspondingInstruct = instructs.find(d => d.key === key);
-            if (typeof (correspondingInstruct?.userFunctions?.customFilter ?? null) === 'function' && correspondingInstruct?.userFunctions?.customFilter !== undefined) {
+            let correspondingInstruct = instructs.find((d) => d.key === key);
+            if (typeof (correspondingInstruct?.userFunctions?.customFilter ?? null) === 'function' &&
+                correspondingInstruct?.userFunctions?.customFilter !== undefined) {
                 let customFilterResult = correspondingInstruct.userFunctions.customFilter(matchedData, filter.value);
                 matchedData = customFilterResult.data;
                 customFilterContinue = customFilterResult.continue;
@@ -401,14 +461,14 @@ function applyFilters() {
                             filterObj[key].value += flags;
                         }
                         // @ts-ignore Shhhh!
-                        matchedData = matchedData.filter(d => new RegExp(regexParts.pattern, flags).test(d[key]));
+                        matchedData = matchedData.filter((d) => new RegExp(regexParts.pattern, flags).test(d[key]));
                     }
                     catch (e) { }
                 }
                 if (!filter.isRegex) {
                     let words = filter.value.trim().toLowerCase().match(/\S+/g);
                     // Iterate over the rows and remove the matching words from unmatchedWords
-                    matchedData = matchedData.filter(d => {
+                    matchedData = matchedData.filter((d) => {
                         let unmatchedWords = Object.assign([], words);
                         let searchableString = d?.[key]?.toString()?.toLowerCase();
                         unmatchedWords = unmatchedWords.filter((word) => {
@@ -428,6 +488,9 @@ function applyFilters() {
     }
 }
 function applyPagination() {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: apply pagination");
+    }
     let p = {};
     p.totalRows = options?.totalRows ?? data?.length;
     p.filteredRows = options?.filteredRows ?? sortedData?.length;
@@ -439,14 +502,15 @@ function applyPagination() {
             options.currentPage = 1;
         }
     }
-    p.firstShownRow = Math.min(p.filteredRows, ((options?.currentPage - 1) * options?.rowsPerPage) + 1);
+    p.firstShownRow = Math.min(p.filteredRows, (options?.currentPage - 1) * options?.rowsPerPage + 1);
     p.lastShownRow = Math.min(p.filteredRows, options.currentPage * options.rowsPerPage);
     if (options.rowsPerPage) {
         p.totalPages = Math.ceil(p.filteredRows / options.rowsPerPage);
     }
     p.pages = [1];
     // Page #2 or '...' if too many pages (more than sum of first two pages + block + last two pages)
-    if (options.currentPage <= options.paginationBlock + 1 || p.totalPages <= options.paginationBlock + 4) {
+    if (options.currentPage <= options.paginationBlock + 1 ||
+        p.totalPages <= options.paginationBlock + 4) {
         if (p.totalPages > 1) {
             p.pages.push(2);
         }
@@ -455,10 +519,11 @@ function applyPagination() {
         p.pages.push(0);
     }
     // Construct the middle block when the currentPage is close enough to page #1 or there aren't too many pages
-    if (options.currentPage <= options.paginationBlock + 1 || p.totalPages <= options.paginationBlock + 4) {
+    if (options.currentPage <= options.paginationBlock + 1 ||
+        p.totalPages <= options.paginationBlock + 4) {
         [...Array(options.paginationBlock)].forEach((_, index) => {
             // Exclude the last page if falls within this block
-            if ((index + 3) < p.totalPages) {
+            if (index + 3 < p.totalPages) {
                 p.pages.push(index + 3);
             }
         });
@@ -499,7 +564,8 @@ function applyPagination() {
     else {
         pageData = sortedData;
     }
-    if (typeof (options.userFunctions?.customParse ?? null) === 'function' && options.userFunctions?.customParse !== undefined) {
+    if (typeof (options.userFunctions?.customParse ?? null) === 'function' &&
+        options.userFunctions?.customParse !== undefined) {
         formattedPageData = options.userFunctions.customParse(JSON.parse(JSON.stringify(pageData)));
     }
     else {
@@ -508,6 +574,9 @@ function applyPagination() {
     pagination = p;
 }
 function goToPage(pageNum) {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: go to page");
+    }
     options.currentPage = pageNum;
     if (options.isDataRemote) {
         renderTable();
@@ -517,21 +586,29 @@ function goToPage(pageNum) {
     }
 }
 function updatePageSize() {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: update page size");
+    }
     options.currentPage = 1;
     renderTable();
 }
 function manualRowEdit(e, index) {
-    let textareaEls = e.target.closest('tr')?.querySelectorAll('textarea[data-name=edit-textarea]');
-    textareaEls?.forEach(textarea => {
+    let textareaEls = e.target
+        .closest('tr')
+        ?.querySelectorAll('textarea[data-name=edit-textarea]');
+    textareaEls?.forEach((textarea) => {
         textarea.style.height = textarea.scrollHeight + 'px';
     });
 }
 function rowClicked(e, index) {
     dispatch('rowClicked', { event: e, data: pageData[index] });
     if (e.target.dataset?.name === 'edit-submit') {
-        let textareaEls = e.target.closest('tr')?.querySelectorAll('textarea[data-name=edit-textarea]');
-        textareaEls.forEach(textareaEl => {
-            data[pageData[index][dataIdKey]][textareaEl?.dataset?.key ?? ''] = textareaEl?.value ?? '';
+        let textareaEls = e.target
+            .closest('tr')
+            ?.querySelectorAll('textarea[data-name=edit-textarea]');
+        textareaEls.forEach((textareaEl) => {
+            data[pageData[index][dataIdKey]][textareaEl?.dataset?.key ?? ''] =
+                textareaEl?.value ?? '';
         });
         data[pageData[index][dataIdKey]][checkboxKey] = false;
         initialize(instructs, options, data);
@@ -543,7 +620,7 @@ function rowDblClicked(e, index) {
 export function closePopUps({ target }) {
     const poppedEls = Array.from(document.querySelectorAll('[data-popped=true]'));
     const closestPoppedEl = target?.closest('[data-popped=true]');
-    poppedEls.forEach(p => {
+    poppedEls.forEach((p) => {
         if (p != closestPoppedEl) {
             p.style.visibility = 'hidden';
             p.dataset.popped = '';
@@ -577,7 +654,7 @@ export function toggleCheckboxColumn(e) {
 }
 export function selectAllAction(e) {
     closeMenu(e);
-    data = data.map(row => {
+    data = data.map((row) => {
         row[checkboxKey] = true;
         return row;
     });
@@ -585,7 +662,7 @@ export function selectAllAction(e) {
 }
 export function selectNoneAction(e) {
     closeMenu(e);
-    data = data.map(row => {
+    data = data.map((row) => {
         delete row[checkboxKey];
         return row;
     });
@@ -593,17 +670,16 @@ export function selectNoneAction(e) {
 }
 export function invertSelectionAction(e) {
     closeMenu(e);
-    data = data.map(row => {
+    data = data.map((row) => {
         row[checkboxKey] = !row[checkboxKey];
         return row;
     });
     initialize(instructs, options, data);
-    ;
 }
 export function addAction(e) {
     closeMenu(e);
     let emptyRow = {};
-    Object.keys(data[0]).forEach(key => {
+    Object.keys(data[0]).forEach((key) => {
         if (key === dataIdKey) {
             emptyRow[key] = data.length;
         }
@@ -620,22 +696,25 @@ export function addAction(e) {
 }
 export function deleteAction(e) {
     closeMenu(e);
-    data = data.filter(row => {
+    data = data.filter((row) => {
         return !row[checkboxKey];
     });
     initialize(instructs, options, data);
 }
 export function getData(removeMetadata = true) {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: get data");
+    }
     let exportData = JSON.parse(JSON.stringify(data));
     let exportInstructs = JSON.parse(JSON.stringify(instructs));
     if (removeMetadata) {
-        exportData.map(row => {
-            Object.keys(row).forEach(key => {
-                specialInstructs.hasOwnProperty(key) ? delete (row[key]) : null;
+        exportData.map((row) => {
+            Object.keys(row).forEach((key) => {
+                specialInstructs.hasOwnProperty(key) ? delete row[key] : null;
             });
             return row;
         });
-        exportInstructs = exportInstructs.filter(instruct => !specialInstructs.hasOwnProperty(instruct.key));
+        exportInstructs = exportInstructs.filter((instruct) => !specialInstructs.hasOwnProperty(instruct.key));
     }
     return {
         options: options,
@@ -646,235 +725,301 @@ export function getData(removeMetadata = true) {
     };
 }
 onMount(async () => {
+    if (ptOptions.verbose) {
+        console.log("PowerTable: mounting...");
+    }
     window.addEventListener('click', closePopUps);
     return () => {
         window.removeEventListener('click', closePopUps);
     };
 });
+console.log("PowerTable: /init");
 </script>
 
+<div data-name="main-container" data-prefix={options.uniquePrefix} data-status={renderStatus}>
+	{#each Object.entries(options.segments ?? {}) as [segment_name, segment_arr]}
+		<div data-name={segment_name} data-type="segment">
+			{#each segment_arr as segment_code, segment_index}
+				{#if segment_code.toLowerCase() === 'search'}
+					<div data-name="search-container" data-segment_index={segment_index}>
+						<label>
+							<span><span>Search</span></span>
+							<input
+								data-name="search-input"
+								type="text"
+								placeholder=" "
+								data-is_regex={searchObj.isRegex}
+								data-is_custom={searchObj.isCustom}
+								bind:value={searchObj.value}
+								on:input={renderTable}
+							/>
+						</label>
+					</div>
+				{:else if segment_code.toLowerCase() === 'stats'}
+					<div data-name="stats-container" data-segment_index={segment_index}>
+						{pagination.firstShownRow}-{pagination.lastShownRow} of {options.filteredRows ??
+							sortedData.length}
+						{#if (options.filteredRows ?? sortedData.length) !== pagination.totalRows}
+							(from {pagination.totalRows})
+						{/if}
+					</div>
+				{:else if segment_code.toLowerCase() === 'table'}
+					<div data-name="table-container" data-segment_index={segment_index}>
+						<table>
+							<thead>
+								{#if options.headerLoadingBar}
+									<tr data-name="loading_bar-tr">
+										<th colspan={instructs.length} />
+									</tr>
+								{/if}
+								{#if options.headerText}
+									<tr data-name="titles-tr">
+										{#each instructs as instruct}
+											{#if specialInstructs.hasOwnProperty(instruct?.key)}
+												{#if instruct?.key === checkboxKey && options.checkboxColumn}
+													<th data-key={instruct.key} data-sortable={instruct?.sortable}>
+														<div data-name="actions-container">
+															<button data-name="handle" on:click={toggleMenu}>⚙️</button>
+															<div data-name="menu">
+																<button data-name="item" on:click={selectAllAction}
+																	>Select All</button
+																>
+																<button data-name="item" on:click={selectNoneAction}
+																	>Select None</button
+																>
+																<button data-name="item" on:click={invertSelectionAction}
+																	>Invert Selection</button
+																>
+																<button data-name="item" on:click={addAction}>Add</button>
+																<button data-name="item" on:click={deleteAction}>Delete</button>
+															</div>
+														</div>
+													</th>
+												{/if}
+											{:else}
+												<th
+													data-key={instruct.key}
+													data-sortable={instruct?.sortable}
+													data-dir={sorting?.[instruct?.key]}
+												>
+													<button
+														disabled={!(instruct?.sortable ?? true)}
+														on:click={() => {
+															if (instruct?.sortable !== false) {
+																trackSorting(instruct.key);
+															}
+														}}><span>{instruct.title}</span></button
+													>
+												</th>
+											{/if}
+										{/each}
+									</tr>
+								{/if}
+								{#if options.headerFilters}
+									<tr data-name="filters-tr">
+										{#each instructs as instruct}
+											{#if specialInstructs.hasOwnProperty(instruct?.key)}
+												{#if instruct?.key === checkboxKey && options.checkboxColumn}
+													<th data-key={instruct.key} />
+												{/if}
+											{:else}
+												<th data-key={instruct.key}>
+													{#if instruct?.filterable !== false}
+														<input
+															data-key={instruct.key}
+															data-is_regex={filterObj[instruct.key].isRegex}
+															data-is_custom={filterObj[instruct.key].isCustom}
+															placeholder="Filter by {instruct.title}"
+															bind:value={filterObj[instruct.key].value}
+															on:input={renderTable}
+														/>
+													{/if}
+												</th>
+											{/if}
+										{/each}
+									</tr>
+								{/if}
+							</thead>
+							<tbody>
+								{#if formattedPageData.length}
+									{#each formattedPageData as record, index}
+										<tr
+											data-index={index}
+											on:click={(e) => rowClicked(e, index)}
+											on:dblclick={(e) => rowDblClicked(e, index)}
+										>
+											{#each instructs as instruct}
+												{#if specialInstructs.hasOwnProperty(instruct?.key)}
+													{#if instruct?.key === checkboxKey && options.checkboxColumn}
+														<td data-key={instruct.key}>
+															<input
+																type="checkbox"
+																bind:checked={data[record[dataIdKey]][checkboxKey]}
+																on:change={(e) => manualRowEdit(e, record[dataIdKey])}
+															/>
+														</td>
+													{/if}
+												{:else}
+													<td data-key={instruct.key}>
+														{#if data[record[dataIdKey]]?.[checkboxKey]}
+															<div data-name="edit-block">
+																<label>
+																	<span>
+																		<span>{instruct.title}</span>
+																	</span><textarea data-name="edit-textarea" data-key={instruct.key}
+																		>{data[record[dataIdKey]][instruct.key]}</textarea
+																	>
+																</label>
+																<button data-name="edit-submit">✔️</button>
+															</div>
+														{:else if instruct?.parseAs === 'unsafe-html'}
+															{@html record[instruct.key] ?? ''}
+														{:else}
+															{record[instruct.key] ?? ''}
+														{/if}
+													</td>
+												{/if}
+											{/each}
+										</tr>
+									{/each}
+								{:else if renderStatus === 'completed'}
+									<tr>
+										<td data-name="noResults-td" colspan={instructs.length}>
+											{#if $$slots.noResults}
+												<slot name="noResults" />
+											{:else}
+												<div>Nothing to display</div>
+											{/if}
+										</td>
+									</tr>
+								{:else if renderStatus === 'rendering'}
+									<tr>
+										<td data-name="rendering-td" colspan={instructs.length}>
+											{#if $$slots.rendering}
+												<slot name="rendering" />
+											{:else}
+												<div>Loading...</div>
+											{/if}
+										</td>
+									</tr>
+								{/if}
+							</tbody>
+							<tfoot>
+								{#if options.footerFilters}
+									<tr data-name="filters-tr">
+										{#each instructs as instruct}
+											{#if specialInstructs.hasOwnProperty(instruct?.key)}
+												{#if instruct?.key === checkboxKey && options.checkboxColumn}
+													<th data-key={instruct.key} />
+												{/if}
+											{:else}
+												<th data-key={instruct.key}>
+													{#if instruct?.filterable !== false}
+														<input
+															data-key={instruct.key}
+															data-is_regex={filterObj[instruct.key].isRegex}
+															data-is_custom={filterObj[instruct.key].isCustom}
+															placeholder="Filter by {instruct.title}"
+															bind:value={filterObj[instruct.key].value}
+															on:input={renderTable}
+														/>
+													{/if}
+												</th>
+											{/if}
+										{/each}
+									</tr>
+								{/if}
+								{#if options.footerText}
+									<tr data-name="titles-tr">
+										{#each instructs as instruct}
+											{#if specialInstructs.hasOwnProperty(instruct?.key)}
+												{#if instruct?.key === checkboxKey && options.checkboxColumn}
+													<th data-key={instruct.key} data-sortable={instruct?.sortable} />
+												{/if}
+											{:else}
+												<th
+													data-key={instruct.key}
+													data-sortable={instruct?.sortable}
+													data-dir={sorting?.[instruct?.key]}
+												>
+													<button
+														disabled={!(instruct?.sortable ?? true)}
+														on:click={() => {
+															if (instruct?.sortable !== false) {
+																trackSorting(instruct.key);
+															}
+														}}><span>{instruct.title}</span></button
+													>
+												</th>
+											{/if}
+										{/each}
+									</tr>
+								{/if}
+								{#if options.footerLoadingBar}
+									<tr data-name="loading_bar-tr">
+										<th colspan={instructs.length} />
+									</tr>
+								{/if}
+							</tfoot>
+						</table>
+					</div>
+				{:else if segment_code.toLowerCase() === 'dropdown'}
+					<div data-name="dropdown-container" data-segment_index={segment_index}>
+						Rows:
+						<select bind:value={options.rowsPerPage} on:change={updatePageSize}>
+							{#each options.rowsPerPageOptions ?? [] as num}
+								<option value={num}>{num}</option>
+							{/each}
+						</select>
+					</div>
+				{:else if segment_code.toLowerCase() === 'settings'}
+					<div data-name="settings-container" data-segment_index={segment_index}>
+						<button data-name="handle" on:click={toggleMenu}>🛠️</button>
+						<div data-name="menu">
+							{#if $$slots.settings}
+								<slot name="settings" />
+							{:else}
+								<button data-name="item" on:click={toggleCheckboxColumn}
+									>{options.checkboxColumn ? 'Hide' : 'Show'} checkboxes</button
+								>
+							{/if}
+						</div>
+					</div>
+				{:else if segment_code.toLowerCase() === 'pagination'}
+					<div data-name="pagination-container" data-segment_index={segment_index}>
+						<button
+							disabled={options.currentPage === 1}
+							on:click={() =>
+								options.currentPage !== 1 ? goToPage((options.currentPage ?? 1) - 1) : null}
+							>Previous</button
+						>
 
-<div data-name="main-container" data-prefix="{options.uniquePrefix}" data-status={renderStatus}>
-    {#each Object.entries(options.segments ?? {}) as [segment_name, segment_arr]}
-        <div data-name={segment_name} data-type="segment">
-            {#each segment_arr as segment_code, segment_index}
-                {#if segment_code.toLowerCase() === 'search'}
-                    <div data-name="search-container" data-segment_index={segment_index}>
-                        <label>
-                            <span><span>Search</span></span>
-                            <input data-name="search-input" type="text" placeholder=" " data-is_regex={searchObj.isRegex} data-is_custom={searchObj.isCustom} bind:value={searchObj.value} on:input={renderTable}>
-                        </label>
-                    </div>
-                {:else if segment_code.toLowerCase() === 'stats'}
-                    <div data-name="stats-container" data-segment_index={segment_index}>
-                        {pagination.firstShownRow}-{pagination.lastShownRow} of {options.filteredRows ?? sortedData.length} 
-                        {#if ((options.filteredRows ?? sortedData.length) !== pagination.totalRows) }
-                            (from {pagination.totalRows})
-                        {/if}
-                    </div>
-                {:else if segment_code.toLowerCase() === 'table'}
-                    <div data-name="table-container" data-segment_index={segment_index}>
-                        <table>
-                            <thead>
-                                {#if options.headerLoadingBar}
-                                    <tr data-name="loading_bar-tr">
-                                        <th colspan={instructs.length}></th>
-                                    </tr>
-                                {/if}
-                                {#if options.headerText}
-                                    <tr data-name="titles-tr">
-                                        {#each instructs as instruct}
-                                            {#if specialInstructs.hasOwnProperty(instruct?.key)}
-                                                {#if instruct?.key === checkboxKey && options.checkboxColumn}
-                                                    <th data-key={instruct.key} data-sortable={instruct?.sortable}>
-                                                        <div data-name="actions-container">
-                                                            <button data-name="handle" on:click={toggleMenu}>⚙️</button>
-                                                            <div data-name="menu">
-                                                                <button data-name="item" on:click={selectAllAction}>Select All</button>
-                                                                <button data-name="item" on:click={selectNoneAction}>Select None</button>
-                                                                <button data-name="item" on:click={invertSelectionAction}>Invert Selection</button>
-                                                                <button data-name="item" on:click={addAction}>Add</button>
-                                                                <button data-name="item" on:click={deleteAction}>Delete</button>
-                                                            </div>
-                                                        </div>
-                                                    </th>
-                                                {/if}
-                                            {:else}
-                                                <th data-key={instruct.key} data-sortable={instruct?.sortable} data-dir={sorting?.[instruct?.key]}>
-                                                    <button
-                                                        disabled={ ! (instruct?.sortable ?? true)}
-                                                        on:click={() => {if(instruct?.sortable !== false){trackSorting(instruct.key)}}}
-                                                    ><span>{instruct.title}</span></button>
-                                                </th>
-                                            {/if}
-                                        {/each}
-                                    </tr>
-                                {/if}
-                                {#if options.headerFilters}
-                                    <tr data-name="filters-tr">
-                                        {#each instructs as instruct}
-                                            {#if specialInstructs.hasOwnProperty(instruct?.key)}
-                                                {#if instruct?.key === checkboxKey && options.checkboxColumn}
-                                                    <th data-key={instruct.key}></th>
-                                                {/if}
-                                            {:else}
-                                                <th data-key={instruct.key}>
-                                                    {#if instruct?.filterable !== false}
-                                                        <input data-key={instruct.key} data-is_regex={filterObj[instruct.key].isRegex} data-is_custom={filterObj[instruct.key].isCustom} placeholder="Filter by {instruct.title}" bind:value={filterObj[instruct.key].value} on:input={renderTable} >
-                                                    {/if}
-                                                </th>
-                                            {/if}
-                                        {/each}
-                                    </tr>
-                                {/if}
-                            </thead>
-                            <tbody>
-                                {#if formattedPageData.length}
-                                    {#each formattedPageData as record, index}
-                                        <tr data-index={index} on:click={(e)=>rowClicked(e, index)} on:dblclick={(e)=>rowDblClicked(e, index)}>
-                                            {#each instructs as instruct}
-                                                {#if specialInstructs.hasOwnProperty(instruct?.key)}
-                                                    {#if instruct?.key === checkboxKey && options.checkboxColumn}
-                                                        <td data-key={instruct.key}>
-                                                            <input type="checkbox" bind:checked={data[record[dataIdKey]][checkboxKey]} on:change={(e)=>manualRowEdit(e, record[dataIdKey])} />
-                                                        </td>
-                                                    {/if}
-                                                {:else}
-                                                    <td data-key={instruct.key}>
-                                                        {#if data[record[dataIdKey]]?.[checkboxKey]}
-                                                            <div data-name="edit-block">
-                                                                <label>
-                                                                    <span>
-                                                                        <span>{instruct.title}</span>
-                                                                    </span><textarea data-name="edit-textarea" data-key={instruct.key}>{data[record[dataIdKey]][instruct.key]}</textarea>
-                                                                </label>
-                                                                <button data-name="edit-submit">✔️</button>
-                                                            </div>
-                                                        {:else if instruct?.parseAs === 'unsafe-html'}
-                                                            {@html (record[instruct.key] ?? '')}
-                                                        {:else}
-                                                            {(record[instruct.key] ?? '')}
-                                                        {/if}
-                                                    </td>
-                                                {/if}
-                                            {/each}
-                                        </tr>
-                                    {/each}
-                                {:else if renderStatus === 'completed'}
-                                    <tr>
-                                        <td data-name="noResults-td" colspan={instructs.length}>
-                                            {#if $$slots.noResults}
-                                                <slot name="noResults" />
-                                            {:else}
-                                                <div>Nothing to display</div>
-                                            {/if}
-                                        </td>
-                                    </tr>
-                                {:else if renderStatus === 'rendering'}
-                                    <tr>
-                                        <td data-name="rendering-td" colspan={instructs.length}>
-                                            {#if $$slots.rendering}
-                                                <slot name="rendering" />
-                                            {:else}
-                                                <div>Loading...</div>
-                                            {/if}
-                                        </td>
-                                    </tr>
-                                {/if}
-                            </tbody>
-                            <tfoot>
-                                {#if options.footerFilters}
-                                    <tr data-name="filters-tr">
-                                        {#each instructs as instruct}
-                                            {#if specialInstructs.hasOwnProperty(instruct?.key)}
-                                                {#if instruct?.key === checkboxKey && options.checkboxColumn}
-                                                    <th data-key={instruct.key}></th>
-                                                {/if}
-                                            {:else}
-                                                <th data-key={instruct.key}>
-                                                    {#if instruct?.filterable !== false}
-                                                        <input data-key={instruct.key} data-is_regex={filterObj[instruct.key].isRegex} data-is_custom={filterObj[instruct.key].isCustom} placeholder="Filter by {instruct.title}" bind:value={filterObj[instruct.key].value} on:input={renderTable} >
-                                                    {/if}
-                                                </th>
-                                            {/if}
-                                        {/each}
-                                    </tr>
-                                {/if}
-                                {#if options.footerText}
-                                    <tr data-name="titles-tr">
-                                        {#each instructs as instruct}
-                                            {#if specialInstructs.hasOwnProperty(instruct?.key)}
-                                                {#if instruct?.key === checkboxKey && options.checkboxColumn}
-                                                    <th data-key={instruct.key} data-sortable={instruct?.sortable}></th>
-                                                {/if}
-                                            {:else}
-                                                <th data-key={instruct.key} data-sortable={instruct?.sortable} data-dir={sorting?.[instruct?.key]}>
-                                                    <button
-                                                        disabled={ ! (instruct?.sortable ?? true)}
-                                                        on:click={() => {if(instruct?.sortable !== false){trackSorting(instruct.key)}}}
-                                                    ><span>{instruct.title}</span></button>
-                                                </th>
-                                            {/if}
-                                        {/each}
-                                    </tr>
-                                {/if}
-                                {#if options.footerLoadingBar}
-                                    <tr data-name="loading_bar-tr">
-                                        <th colspan={instructs.length}></th>
-                                    </tr>
-                                {/if}
-                            </tfoot>
-                        </table>
-                    </div>
-                {:else if segment_code.toLowerCase() === 'dropdown'}
-                    <div data-name="dropdown-container" data-segment_index={segment_index}>
-                        Rows: 
-                        <select bind:value={options.rowsPerPage} on:change={updatePageSize}>
-                            {#each options.rowsPerPageOptions ?? [] as num}
-                                <option value={num}>{num}</option>
-                            {/each}
-                        </select>
-                    </div>
-                {:else if segment_code.toLowerCase() === 'settings'}
-                    <div data-name="settings-container" data-segment_index={segment_index}>
-                        <button data-name="handle" on:click={toggleMenu}>🛠️</button>
-                        <div data-name="menu">
-                            {#if $$slots.settings}
-                                <slot name="settings" />
-                            {:else}
-                                <button data-name="item" on:click={toggleCheckboxColumn}>{options.checkboxColumn ? 'Hide' : 'Show'} checkboxes</button>
-                            {/if}
-                        </div>
-                    </div>
-                {:else if segment_code.toLowerCase() === 'pagination'}
-                    <div data-name="pagination-container" data-segment_index={segment_index}>
-                        <button
-                            disabled={options.currentPage === 1}
-                            on:click={()=>options.currentPage !== 1 ? goToPage((options.currentPage ?? 1) - 1) : null}
-                        >Previous</button>
+						{#if pagination.totalPages}
+							{#each pagination.pages ?? [] as pageNum}
+								{#if pageNum === 0}
+									<button disabled={true}>...</button>
+								{:else}
+									<button
+										data-active={options.currentPage === pageNum}
+										on:click={() => (options.currentPage !== pageNum ? goToPage(pageNum) : null)}
+										>{pageNum}</button
+									>
+								{/if}
+							{/each}
+						{:else}
+							<button data-active={true}>1</button>
+						{/if}
 
-                        {#if pagination.totalPages}
-                            {#each pagination.pages ?? [] as pageNum}
-                                {#if pageNum === 0}
-                                    <button disabled={true}>...</button>
-                                {:else}
-                                    <button
-                                        data-active={options.currentPage === pageNum}
-                                        on:click={()=>options.currentPage !== pageNum ? goToPage(pageNum) : null}
-                                    >{pageNum}</button>
-                                {/if}
-                            {/each}
-                        {:else}
-                            <button data-active={true}>1</button>
-                        {/if}
-
-                        <button
-                            disabled={!pagination.totalPages || options.currentPage === pagination.totalPages}
-                            on:click={()=>options.currentPage !== pagination.totalPages ? goToPage((options.currentPage ?? 1) + 1) : null}
-                        >Next</button>
-                    </div>
-                {/if}
-            {/each}
-        </div>
-    {/each}
+						<button
+							disabled={!pagination.totalPages || options.currentPage === pagination.totalPages}
+							on:click={() =>
+								options.currentPage !== pagination.totalPages
+									? goToPage((options.currentPage ?? 1) + 1)
+									: null}>Next</button
+						>
+					</div>
+				{/if}
+			{/each}
+		</div>
+	{/each}
 </div>

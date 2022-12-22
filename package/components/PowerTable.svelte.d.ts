@@ -52,6 +52,7 @@ export interface Options {
     sortOrder?: {
         [k in SortString]?: SortString;
     };
+    verbose?: boolean;
 }
 export interface DataFeed {
     instructs?: Instructs[];

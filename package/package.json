@@ -53,9 +53,6 @@
     "./components/PowerTable.svelte": "./components/PowerTable.svelte",
     ".": "./index.js",
     "./scss": "./scss.js",
-    "./styles/power-table.scss": "./styles/power-table.scss",
-    "./dist/power-table.js": "./dist/power-table.js",
-    "./dist/power-table.js.map": "./dist/power-table.js.map",
-    "./dist/power-table.d.ts": "./dist/power-table.d.ts"
+    "./styles/power-table.scss": "./styles/power-table.scss"
   }
 }
